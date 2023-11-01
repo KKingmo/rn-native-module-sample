@@ -10,23 +10,23 @@ class CalculatorModule(reactContext: ReactApplicationContext) :
     override fun getName() = "CalculatorModule"
 
     @ReactMethod
-    fun executedCalc(action: String, numberA: Double, numberB: Double, promise: Promise) {
-        if (action === "plus") {
+    fun executeCalc(action: String, numberA: Double, numberB: Double, promise: Promise) {
+        if (action == "plus") {
             promise.resolve(numberA + numberB);
             return;
         }
 
-        if (action === "minus") {
+        if (action == "minus") {
             promise.resolve(numberA - numberB);
             return;
         }
 
-        if (action === "multiply") {
+        if (action == "multiply") {
             promise.resolve(numberA * numberB);
             return;
         }
 
-        if (action === "divide") {
+        if (action == "divide") {
             promise.resolve(numberA / numberB);
             return;
         }

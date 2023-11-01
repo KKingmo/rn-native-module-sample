@@ -9,11 +9,24 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import {Colors} from 'react-native/Libraries/NewAppScreen';
+import {executeCalculator} from './utils/NativeCalculatorUtils';
+
+export type TypeCalcAction =
+  | 'plus'
+  | 'minus'
+  | 'multiply'
+  | 'divide'
+  | 'equal'
+  | 'clear';
 
 const App = () => {
   const isDarkMode = useColorScheme() === 'dark';
   const screenSize = useWindowDimensions();
   const buttonSize = screenSize.width / 4;
+  const [lastAction, setLastAction] = useState<Exclude<
+    TypeCalcAction,
+    'equal' | 'clear'
+  > | null>(null);
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
@@ -39,17 +52,54 @@ const App = () => {
     [resultNum],
   );
 
-  // todo use Native Module
-  const onPressAction = useCallback<(action: string) => void>(pressed => {
-    console.log(pressed);
+  const onPressAction = useCallback<(action: TypeCalcAction) => Promise<void>>(
+    async pressed => {
+      console.log(pressed);
 
-    if (pressed === 'clear') {
-      setInputNum('');
-      setTempNum(0);
-      setResultNum('');
-      return;
-    }
-  }, []);
+      if (pressed === 'clear') {
+        setInputNum('');
+        setTempNum(0);
+        setResultNum('');
+        return;
+      }
+
+      if (pressed === 'equal') {
+        if (tempNum !== 0 && lastAction !== null) {
+          const result = await executeCalculator(
+            lastAction,
+            tempNum,
+            parseInt(inputNum),
+          );
+
+          console.log(result);
+          setResultNum(result.toString());
+          setTempNum(0);
+        }
+        return;
+      }
+
+      setLastAction(pressed);
+
+      if (resultNum !== '') {
+        setTempNum(parseInt(resultNum));
+        setResultNum('');
+        setInputNum('');
+      } else if (tempNum === 0) {
+        setTempNum(parseInt(inputNum));
+        setInputNum('');
+      } else {
+        const result = await executeCalculator(
+          pressed,
+          tempNum,
+          parseInt(inputNum),
+        );
+        console.log(result);
+        setResultNum(result.toString());
+        setTempNum(0);
+      }
+    },
+    [inputNum, lastAction, resultNum, tempNum],
+  );
 
   return (
     <SafeAreaView style={{flex: 1}}>
@@ -57,18 +107,24 @@ const App = () => {
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
       />
-      <View style={{flex: 1, alignItems: 'flex-end', justifyContent: 'center'}}>
-        <View style={{flex: 1, flexDirection: 'row'}}>
-          <Text style={{fontSize: 48, padding: 48}}>{inputNum}</Text>
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+        }}>
+        <View style={{flexGrow: 1, flexDirection: 'row'}}>
+          <Text style={{fontSize: 48, padding: 48}}>
+            {resultNum !== '' ? resultNum : inputNum}
+          </Text>
         </View>
 
-        <View style={{flex: 1, flexDirection: 'row'}}>
+        <View style={{flexGrow: 1, flexDirection: 'row'}}>
           <View
             style={{
               flex: 1,
               flexDirection: 'row',
               flexWrap: 'wrap',
-              alignItems: 'center',
               justifyContent: 'center',
               marginRight: 4,
             }}>
@@ -98,6 +154,7 @@ const App = () => {
             ].map(action => {
               return (
                 <Pressable
+                  key={action.label}
                   style={{
                     width: screenSize.width / 6,
                     height: screenSize.width / 6,
@@ -106,7 +163,9 @@ const App = () => {
                     justifyContent: 'center',
                     backgroundColor: 'lightgray',
                   }}
-                  onPress={() => onPressAction(action.action)}>
+                  onPress={() =>
+                    onPressAction(action.action as TypeCalcAction)
+                  }>
                   <Text style={{fontSize: 24}}>{action.label}</Text>
                 </Pressable>
               );
